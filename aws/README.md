@@ -1,5 +1,7 @@
 转发 AWS 流数据到 DataFlux, 目前支持 CloudWatch Logs, CloudWatch Event, S3 Event。
 
+下载 AWS Lambda 函数代码包 **dtforward.zip**: https://github.com/CloudCare/dataflux-serverless-functions/releases/tag/v1.0.0
+
 ##Lambda函数安装:  
 
 1. 进入 AWS Lambda 控制台，选择 **创建函数**  
@@ -12,7 +14,7 @@
 ![step 2](guide/image/lambda_step2.png)
 
 
-3. 创建完成后进入函数配置页面, **处理程序** 设置为"dtforward", 点击 **上传** 按钮, 上传文件 dtforward.zip, 完成后点击配置页面右上方的 **保存** 按钮。同时添加环境变量 **DATAFLUX_DATAWAY_URL** , 变量值为接收数据的dataway地址, 如果需要查看函数执行时的debug信息，可添加环境变量 **DATAFLUX_DEBUG**, 值为true。
+3. 创建完成后进入函数配置页面, **处理程序** 设置为"dtforward", 点击 **上传** 按钮, 上传代码包 dtforward.zip, 完成后点击配置页面右上方的 **保存** 按钮。同时添加环境变量 **DATAFLUX_DATAWAY_URL** , 变量值为接收数据的dataway地址, 如果需要查看函数执行时的debug信息，可添加环境变量 **DATAFLUX_DEBUG**, 值为true。
 
 ![step 3](guide/image/lambda_step3.png)
 

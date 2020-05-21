@@ -1,0 +1,11 @@
+*.orig
+*.exe
+*.tmp
+*.pid
+*.log
+*.zip
+test/
+local/
+dtforward
+test.conf
+awscloudwatch_test.go

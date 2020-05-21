@@ -1,4 +1,4 @@
-package aws
+package main
 
 import (
 	"bytes"
@@ -316,7 +316,7 @@ func sendMetrics(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func fmain() {
+func main() {
 	lambda.Start(HandleRequest)
 }
 

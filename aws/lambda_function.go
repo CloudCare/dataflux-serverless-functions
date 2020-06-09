@@ -1,4 +1,4 @@
-package main
+package aws
 
 import (
 	"bytes"
@@ -29,6 +29,12 @@ const (
 	EventType_CloudwatchLog
 	EventType_CloudwatchEvent
 	EventType_S3Event
+)
+
+const (
+	LogData = iota
+	EventData
+	ObjectData
 )
 
 var (
@@ -124,13 +130,12 @@ func awslogHandler(lctx *lambdacontext.LambdaContext, ev *events.CloudwatchLogsE
 	for _, le := range logdata.LogEvents {
 		tags := map[string]string{
 			"LogGroup": logdata.LogGroup,
-			"$app":     logdata.LogStream,
 		}
 
 		fields := map[string]interface{}{}
-		fields["$content"] = le.Message
+		fields["__content"] = le.Message
 
-		metricName := fmt.Sprintf("$log_%s", logdata.LogStream)
+		metricName := logdata.LogStream
 
 		m, err := metric.New(metricName, tags, fields, time.Unix(le.Timestamp/1000, 0))
 		if err != nil {
@@ -141,7 +146,7 @@ func awslogHandler(lctx *lambdacontext.LambdaContext, ev *events.CloudwatchLogsE
 
 	}
 
-	return sendMetrics(logMetrics)
+	return sendMetrics(logMetrics, LogData)
 }
 
 func cwEventHandler(lctx *lambdacontext.LambdaContext, ev *events.CloudWatchEvent) error {
@@ -153,26 +158,26 @@ func cwEventHandler(lctx *lambdacontext.LambdaContext, ev *events.CloudWatchEven
 	}
 
 	if ev.Source != "" {
-		tags["$source"] = ev.Source
+		tags["__source"] = ev.Source
 	} else {
-		tags["$source"] = "cloudwatch"
+		tags["__source"] = "cloudwatch"
 	}
 
 	fields := map[string]interface{}{
-		"$title": "cloudwatch_event",
+		"__title": "cloudwatch_event",
 	}
 	if ev.Detail != nil {
-		fields["Detail"] = string(ev.Detail)
+		fields["__content"] = string(ev.Detail)
 	}
 
 	var evMetrics []telegraf.Metric
-	m, err := metric.New(`$keyevent`, tags, fields, ev.Time)
+	m, err := metric.New(`__keyevent`, tags, fields, ev.Time)
 	if err != nil {
 		log.Printf("[DataFlux] Fail to make metric, %s", err)
 	} else {
 		evMetrics = append(evMetrics, m)
 	}
-	return sendMetrics(evMetrics)
+	return sendMetrics(evMetrics, EventData)
 }
 
 func s3EventHandler(lctx *lambdacontext.LambdaContext, ev *events.S3Event) error {
@@ -181,14 +186,14 @@ func s3EventHandler(lctx *lambdacontext.LambdaContext, ev *events.S3Event) error
 	for _, record := range ev.Records {
 
 		tags := map[string]string{
-			"$source":     record.EventSource,
+			"__source":    record.EventSource,
 			"Bucket":      record.S3.Bucket.Name,
 			"Region":      record.AWSRegion,
 			"PrincipalID": record.PrincipalID.PrincipalID,
 		}
 
 		fields := map[string]interface{}{
-			"$title":          record.EventName,
+			"__title":         record.EventName,
 			"Object":          record.S3.Object.Key,
 			"ObjectSize":      record.S3.Object.Size,
 			"ObjectVersion":   record.S3.Object.VersionID,
@@ -196,14 +201,14 @@ func s3EventHandler(lctx *lambdacontext.LambdaContext, ev *events.S3Event) error
 			"SourceIPAddress": record.RequestParameters.SourceIPAddress,
 		}
 
-		m, err := metric.New(`$keyevent`, tags, fields, record.EventTime)
+		m, err := metric.New(`__keyevent`, tags, fields, record.EventTime)
 		if err != nil {
 			log.Printf("[DataFlux] Fail to make metric, %s", err)
 		} else {
 			evMetrics = append(evMetrics, m)
 		}
 	}
-	return sendMetrics(evMetrics)
+	return sendMetrics(evMetrics, EventData)
 }
 
 func snsEventHandler(ev *events.SNSEvent) error {
@@ -248,7 +253,7 @@ func HandleRequest(ctx context.Context, ev interface{}) error {
 	return fmt.Errorf("[DataFlux] Event type not supported")
 }
 
-func sendMetrics(metrics []telegraf.Metric) error {
+func sendMetrics(metrics []telegraf.Metric, dataType int) error {
 
 	if len(metrics) == 0 {
 		return nil
@@ -272,6 +277,21 @@ func sendMetrics(metrics []telegraf.Metric) error {
 		return err
 	}
 
+	var url string
+
+	if datawayUrl[len(datawayUrl)-1] == '/' {
+		datawayUrl = datawayUrl[:len(datawayUrl)-1]
+	}
+
+	switch dataType {
+	case LogData:
+		url = fmt.Sprintf("%s%s", datawayUrl, `/v1/write/logging`)
+	case EventData:
+		url = fmt.Sprintf("%s%s", datawayUrl, `/v1/write/keyevent`)
+	case ObjectData:
+		url = fmt.Sprintf("%s%s", datawayUrl, `/v1/write/object`)
+	}
+
 	var reqBodyBuffer io.Reader = bytes.NewBuffer(reqBody)
 
 	rc, err := compressWithGzip(reqBodyBuffer)
@@ -281,13 +301,18 @@ func sendMetrics(metrics []telegraf.Metric) error {
 	defer rc.Close()
 	reqBodyBuffer = rc
 
-	req, err := http.NewRequest(http.MethodPost, datawayUrl, reqBodyBuffer)
+	req, err := http.NewRequest(http.MethodPost, url, reqBodyBuffer)
 	if err != nil {
 		return err
 	}
 
 	req.Header.Set("User-Agent", "dataflux-aws-lambda")
-	req.Header.Set("Content-Type", `text/plain; charset=utf-8`)
+	switch dataType {
+	case LogData, EventData:
+		req.Header.Set("Content-Type", `text/plain; charset=utf-8`)
+	case ObjectData:
+		req.Header.Set("Content-Type", `application/json; charset=utf-8`)
+	}
 	req.Header.Set("Content-Encoding", "gzip")
 
 	for k, v := range custemHttpHeaders {

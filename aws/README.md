@@ -48,26 +48,25 @@
 ##采集指标:  
 
 ###CloudWatch Logs  
-每条转发的日志都记录了日志组和日志流，DataFlux以 **$log_<日志流名称>** 作为指标集名称。  
+每条转发的日志都记录了日志组和日志流，DataFlux以 **日志流名称** 作为指标集名称。  
 
 tags:  
 
 | tag | 描述 |
 | --- | ---- |
 | LogGroup | 日志组名称 |
-| $app | 日志流名称 |
 
 
 fields:  
 
 | 指标 | 描述 | 类型 |
 | --- | ---- | ---- |
-| $content | 日志内容 | string |
+| __content | 日志内容 | string |
 
 
 
 ###CloudWatch Event  
-指标集名称为 **$keyevent**。   
+指标集名称为 **__keyevent**。   
 
 tags:  
 
@@ -76,19 +75,19 @@ tags:
 | DetailType | 事件的详细类型 |
 | AccountID | 账号名称 |
 | Region | 事件所在区域 |
-| $source | 事件源 |
+| __source | 事件源 |
 
 
 fields:  
 
 | 指标 | 描述 | 类型 |
 | --- | ---- | ---- |
-| $title | 事件标题 | string |
+| __title | 事件标题 | string |
 
 
 
 ###S3 Event  
-指标集名称为 **$keyevent**。 
+指标集名称为 **__keyevent**。 
 
 tags:  
 
@@ -96,14 +95,14 @@ tags:
 | --- | ---- |
 | Bucket | s3存储桶名称 |
 | Region | 事件所在区域 |
-| $source | 事件源 |
+| __source | 事件源 |
 
 
 fields:  
 
 | 指标 | 描述 | 类型 |
 | --- | ---- | ---- |
-| $title | 事件标题 | string |
+| __title | 事件标题 | string |
 | Object | s3存储对象名称 | string |
 | ObjectSize | s3存储对象的大小 | int |
 | ObjectVersion | s3存储对象版本 | string |

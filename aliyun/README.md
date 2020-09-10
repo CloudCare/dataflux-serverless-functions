@@ -18,6 +18,19 @@
 
 ![step 4](guide/image/step4.png)  
 
+3. 配置以下环境变量:  
+
+![step 7](guide/image/step7.png)  
+
+
+| 名称  |  描述 | 必须  |
+| ------------ | ------------ | ------------ |
+| DEBUG_MODE | 是否调试模式，1表示开启 | 否 |
+| DATAWAY_URL | dataway url地址 | 是 |
+| DATAWAY_ACCESS_KEY | dataway认证access key | 否 |
+| DATAWAY_SECRET_KEY | dataway认证secret key | 否 |
+| DATAWAY_TOKEN | dataway认证token | 否 |
+
 
 
 ###配置事件
